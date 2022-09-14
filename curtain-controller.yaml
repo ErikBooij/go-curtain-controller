@@ -1,0 +1,17 @@
+api:
+  bind: "0.0.0.0"
+  port: 80
+mqtt:
+  host: "192.168.2.2"
+  port: 1883
+  username: ""
+  password: ""
+  client-id: "curtain-controller"
+devices:
+  aqara-shutters:
+    bedroom-shutter:
+      topic: "zigbee2mqtt/Bedroom Shutter/set"
+  slide-curtains:
+    bedroom-curtain:
+      ip: "192.168.2.242"
+      device-id: ""
