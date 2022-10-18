@@ -61,6 +61,7 @@ func createMQTTClient(mqttConfig config.MQTTConfig) mqtt.Client {
 	opts.SetPingTimeout(1 * time.Second)
 	opts.SetConnectRetryInterval(5 * time.Second)
 	opts.SetAutoReconnect(true)
+	opts.SetConnectRetry(true)
 
 	// DEBUG LOG MESSAGES FOR MQTT CONNECTION STATUS
 	opts.OnConnect = func(client mqtt.Client) {
@@ -85,7 +86,7 @@ func createMQTTClient(mqttConfig config.MQTTConfig) mqtt.Client {
 
 	c := mqtt.NewClient(opts)
 
-	if token := c.Connect(); token.Wait() && token.Error() != nil {
+	if token := c.Connect(); token.Error() != nil {
 		fmt.Printf("Unable to connect to MQTT broker: %s\n", token.Error())
 	}
 
