@@ -2,7 +2,9 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path"
@@ -12,10 +14,15 @@ import (
 	"curtain-controller/app/config"
 	"curtain-controller/app/drivers"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	fmt.Println("Curtain controller starting")
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatalf("Unable to load .env: %s", err)
+	}
 
 	appConfig := config.LoadConfig(configPath("curtain-controller.yaml"))
 	mqttClient := createMQTTClient(appConfig.MQTT)

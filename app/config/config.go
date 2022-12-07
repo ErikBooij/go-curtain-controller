@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
@@ -44,6 +45,21 @@ func LoadConfig(path string) AppConfig {
 	if err != nil {
 		panic(fmt.Errorf("unable to read config file: %s", err))
 	}
+
+	placeholderRegex := regexp.MustCompile(`env\((?:(.+?)(?::(.+))?)\)`)
+	// specRegex := regexp.MustCompile()
+
+	content = placeholderRegex.ReplaceAllFunc(content, func(bytes []byte) []byte {
+		subMatches := placeholderRegex.FindStringSubmatch(string(bytes))
+
+		envValue, ok := os.LookupEnv(subMatches[1])
+
+		if ok {
+			return []byte(envValue)
+		}
+
+		return []byte(subMatches[2])
+	})
 
 	appConfig := AppConfig{}
 

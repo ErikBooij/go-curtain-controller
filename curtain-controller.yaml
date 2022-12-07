@@ -2,16 +2,16 @@ api:
   bind: "0.0.0.0"
   port: 80
 mqtt:
-  host: "192.168.2.2"
-  port: 1883
-  username: ""
-  password: ""
-  client-id: "curtain-controller"
+  host: "env(MQTT_IP)"
+  port: env(MQTT_PORT)
+  username: "env(MQTT_USER)"
+  password: "env(MQTT_PASS)"
+  client-id: "env(MQTT_CLIENT_ID:curtain-controller)"
 devices:
   aqara-shutters:
     bedroom-shutter:
-      topic: "zigbee2mqtt/Bedroom Shutter/set"
+      topic: "zigbee2mqtt/shutter-bedroom/set"
   slide-curtains:
     bedroom-curtain:
-      ip: "192.168.2.242"
-      device-id: ""
+      ip: "env(BEDROOM_CURTAIN_IP)"
+      device-id: "env(BEDROOM_CURTAIN_DEVICE_ID)"

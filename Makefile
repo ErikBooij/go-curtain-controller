@@ -4,6 +4,10 @@ build-local:
 build-remote:
 	GOOS=linux GOARCH=amd64 go build -o dist/curtain-controller *.go && chmod +x dist/curtain-controller
 
+copy-local-config:
+	cp -r curtain-controller.yaml dist/curtain-controller.yaml
+	cp -r .env dist/.env
+
 deploy:
 	@echo "Building application"
 	@make build-remote > /dev/null
@@ -34,5 +38,5 @@ remote-verify-running:
 remote-verify-success:
 	ssh server sudo journalctl -u curtain-controller --since \"12 seconds ago\" | grep "running"
 
-run-local: build-local
+run-local: build-local copy-local-config
 	./dist/curtain-controller-macos
