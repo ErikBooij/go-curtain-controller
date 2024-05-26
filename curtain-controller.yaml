@@ -15,3 +15,4 @@ devices:
     bedroom-curtain:
       ip: "env(BEDROOM_CURTAIN_IP)"
       device-id: "env(BEDROOM_CURTAIN_DEVICE_ID)"
+      auth: false

@@ -37,6 +37,7 @@ type AqaraShutterConfig struct {
 type SlideCurtainConfig struct {
 	DeviceID string `yaml:"device-id"`
 	IP       string `yaml:"ip"`
+	Auth     bool   `yaml:"auth"`
 }
 
 func LoadConfig(path string) AppConfig {

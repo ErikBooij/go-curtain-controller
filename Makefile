@@ -6,7 +6,7 @@ build-remote:
 
 copy-local-config:
 	cp -r curtain-controller.yaml dist/curtain-controller.yaml
-	cp -r .env dist/.env
+	cp -r .env dist/.env || true
 
 deploy:
 	@echo "Building application"

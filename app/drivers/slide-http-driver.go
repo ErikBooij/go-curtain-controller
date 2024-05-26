@@ -18,16 +18,18 @@ type SlideCurtain interface {
 }
 
 type slideCurtain struct {
+	auth       bool
 	deviceId   string
 	ip         string
 	nonceCount int
 }
 
-func CreateSlideCurtain(ip string, deviceId string) SlideCurtain {
+func CreateSlideCurtain(ip string, deviceId string, auth bool) SlideCurtain {
 	return &slideCurtain{
 		deviceId:   deviceId,
 		ip:         ip,
 		nonceCount: 0,
+		auth:       auth,
 	}
 }
 
@@ -44,7 +46,7 @@ func (sc *slideCurtain) SetPosition(position float64) bool {
 
 	body, _ := json.Marshal(slidePositionRequest{Position: position})
 
-	err := sc.postWithDigestAuth("/rpc/Slide.SetPos", body)
+	err := sc.postWithOptionalDigestAuth("/rpc/Slide.SetPos", body)
 
 	if err != nil {
 		return false
@@ -53,54 +55,56 @@ func (sc *slideCurtain) SetPosition(position float64) bool {
 	return true
 }
 
-func (sc *slideCurtain) postWithDigestAuth(uri string, body []byte) error {
+func (sc *slideCurtain) postWithOptionalDigestAuth(uri string, body []byte) error {
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
 
-	response, err := sc.sendRequest("POST", uri, headers, []byte{})
+	if sc.auth {
+		response, err := sc.sendRequest("POST", uri, headers, []byte{})
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+
+		if response.StatusCode != http.StatusUnauthorized {
+			return fmt.Errorf("unexpected status code, expected %d (with auth challenge), got %d", http.StatusUnauthorized, response.StatusCode)
+		}
+
+		authChallenge := response.Header.Get("www-authenticate")
+
+		if authChallenge == "" {
+			return errors.New("no auth challenge present in initial response from device (expected www-authenticate header)")
+		}
+
+		qopRegex, _ := regexp.Compile("qop=\"(.*?)\"")
+		realmRegex, _ := regexp.Compile("realm=\"(.*?)\"")
+		nonceRegex, _ := regexp.Compile("nonce=\"(.*?)\"")
+
+		qopMatch := qopRegex.FindAllStringSubmatch(authChallenge, 1)
+		realmMatch := realmRegex.FindAllStringSubmatch(authChallenge, 1)
+		nonceMatch := nonceRegex.FindAllStringSubmatch(authChallenge, 1)
+
+		if qopMatch == nil || realmMatch == nil || nonceMatch == nil {
+			return fmt.Errorf("auth challenge is missing realm or nonce (was: %s)", authChallenge)
+		}
+
+		qop := qopMatch[0][1]
+		realm := realmMatch[0][1]
+		nonce := nonceMatch[0][1]
+
+		ha1 := hashMD5(fmt.Sprintf("%s:%s:%s", "user", realm, sc.deviceId))
+		ha2 := hashMD5(fmt.Sprintf("%s:%s", "POST", uri))
+
+		sc.nonceCount++
+
+		nc := fmt.Sprintf("%08d", sc.nonceCount)
+		cnonce := fmt.Sprintf("%08s", randomNonce())
+
+		res := hashMD5(fmt.Sprintf("%s:%s:%s:%s:%s:%s", ha1, nonce, nc, cnonce, qop, ha2))
+
+		headers["Authorization"] = fmt.Sprintf("Digest username=\"user\", realm=\"%s\", nonce=\"%s\", uri=\"%s\", response=\"%s\", qop=\"%s\", nc=\"%s\", cnonce=\"%s\"", realm, nonce, uri, res, qop, nc, cnonce)
 	}
-
-	if response.StatusCode != http.StatusUnauthorized {
-		return fmt.Errorf("unexpected status code, expected %d (with auth challenge), got %d", http.StatusUnauthorized, response.StatusCode)
-	}
-
-	authChallenge := response.Header.Get("www-authenticate")
-
-	if authChallenge == "" {
-		return errors.New("no auth challenge present in initial response from device (expected www-authenticate header)")
-	}
-
-	qopRegex, _ := regexp.Compile("qop=\"(.*?)\"")
-	realmRegex, _ := regexp.Compile("realm=\"(.*?)\"")
-	nonceRegex, _ := regexp.Compile("nonce=\"(.*?)\"")
-
-	qopMatch := qopRegex.FindAllStringSubmatch(authChallenge, 1)
-	realmMatch := realmRegex.FindAllStringSubmatch(authChallenge, 1)
-	nonceMatch := nonceRegex.FindAllStringSubmatch(authChallenge, 1)
-
-	if qopMatch == nil || realmMatch == nil || nonceMatch == nil {
-		return fmt.Errorf("auth challenge is missing realm or nonce (was: %s)", authChallenge)
-	}
-
-	qop := qopMatch[0][1]
-	realm := realmMatch[0][1]
-	nonce := nonceMatch[0][1]
-
-	ha1 := hashMD5(fmt.Sprintf("%s:%s:%s", "user", realm, sc.deviceId))
-	ha2 := hashMD5(fmt.Sprintf("%s:%s", "POST", uri))
-
-	sc.nonceCount++
-
-	nc := fmt.Sprintf("%08d", sc.nonceCount)
-	cnonce := fmt.Sprintf("%08s", randomNonce())
-
-	res := hashMD5(fmt.Sprintf("%s:%s:%s:%s:%s:%s", ha1, nonce, nc, cnonce, qop, ha2))
-
-	headers["Authorization"] = fmt.Sprintf("Digest username=\"user\", realm=\"%s\", nonce=\"%s\", uri=\"%s\", response=\"%s\", qop=\"%s\", nc=\"%s\", cnonce=\"%s\"", realm, nonce, uri, res, qop, nc, cnonce)
 
 	apiResponse, err := sc.sendRequest("POST", uri, headers, body)
 

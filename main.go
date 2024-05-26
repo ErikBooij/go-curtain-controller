@@ -39,7 +39,7 @@ func main() {
 	}
 
 	for n, c := range appConfig.Devices.SlideCurtains {
-		devices.SlideCurtains[n] = drivers.CreateSlideCurtain(c.IP, c.DeviceID)
+		devices.SlideCurtains[n] = drivers.CreateSlideCurtain(c.IP, c.DeviceID, c.Auth)
 	}
 
 	fmt.Println("Curtain controller running")

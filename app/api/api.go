@@ -86,6 +86,10 @@ func getParameters(request *http.Request) (string, float64, error) {
 }
 
 func respondWithError(writer http.ResponseWriter, statusCode int, message interface{}, args ...interface{}) {
+	if m, ok := message.(error); ok {
+		message = m.Error()
+	}
+
 	writer.WriteHeader(statusCode)
 	writer.Write([]byte(fmt.Sprintf(message.(string), args...)))
 }
